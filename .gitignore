@@ -6,3 +6,4 @@ build/
 reports/
 contracts/
 interfaces/
+tests/
