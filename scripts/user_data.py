@@ -108,7 +108,7 @@ def create_merkle():
     }
 
     # Write the distribution data to a JSON file
-    with open('./data/final_distribution.json', 'w') as json_file:
+    with open('./data/lock_break_airdrop.json', 'w') as json_file:
         json.dump(distribution, json_file, indent=4)
     print(f'Distribution successfully written for {len(distribution["claims"])} users')
     print(f"base merkle root: {encode_hex(tree.root)}")
