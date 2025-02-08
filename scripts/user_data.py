@@ -71,7 +71,7 @@ def main():
 
 def create_merkle_prod():
     total_distribution = 10_000_000 * 10 ** 18
-    user_amount_data = json.load(open('./data/penalty_data.json'))
+    user_amount_data = json.load(open('./data/penalty_data_prod.json'))
     return _create_merkle(user_amount_data, total_distribution, False)
 
 def create_merkle_dev():
@@ -116,7 +116,7 @@ def _create_merkle(user_amount_data, total_distribution, is_dev):
     }
 
     # Write the distribution data to a JSON file
-    with open(f'./data/lock_break_airdrop_{"dev" if is_dev else "prod"}.json', 'w') as json_file:
+    with open(f'./data/merkle_data_{"dev" if is_dev else "prod"}.json', 'w') as json_file:
         json.dump(distribution, json_file, indent=4)
     print(f'Distribution successfully written for {len(distribution["claims"])} users')
     print(f"base merkle root: {encode_hex(tree.root)}")
