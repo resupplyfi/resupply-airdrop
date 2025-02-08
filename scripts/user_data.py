@@ -46,21 +46,21 @@ class MerkleTree:
         return web3.keccak(b"".join(sorted([a, b])))
     
 def main():
-    from brownie import Contract
+    from brownie import Contract, chain
     LOCKER = Contract('0x3f78544364c3eCcDCe4d9C89a630AEa26122829d')
-    end_block = 21_100_000
-    start_block = end_block - 1_000_000  # TODO: replace with new once gov vote passes
+    end_block = chain.height
+    start_block = 21_425_699  # Last block before December 18 00:00:00 UTC
     print(f'Fetching all locks withdrawn between blocks {start_block:,} --> {end_block:,}')
     logs = LOCKER.events.LocksWithdrawn().get_logs(fromBlock=start_block, toBlock=end_block)
     print(f'{len(logs)} locks withdrawn')
     data = {}
     for log in logs:
         user = log.args['account']
-        penalty = log.args['penalty']
+        penalty = log.args['penalty'] / 1e18
         if penalty > 0:
             data[user] = data.get(user, 0) + penalty
     
-    print(f'{len(data)} unique users with penalties > 0')
+    print(f'{len(data)} unique users with penalties')
     data = {
         web3.to_checksum_address(k): int(v) for k, v in data.items()
     }
@@ -69,15 +69,26 @@ def main():
         json.dump(data, f, indent=4)
 
 
-def create_merkle():
+def create_merkle_prod():
     total_distribution = 10_000_000 * 10 ** 18
-    user_amount_data = json.load(open('./data/sample_user_data.json'))
-    total_amounts = sum(user_amount_data.values())
-    ratio = total_distribution / total_amounts
+    user_amount_data = json.load(open('./data/penalty_data.json'))
+    return _create_merkle(user_amount_data, total_distribution, False)
 
+def create_merkle_dev():
+    total_distribution = (11111 + 22222 + 33333) * 10 ** 18
+    user_amount_data = json.load(open('./data/penalty_data_dev.json'))
+    return _create_merkle(user_amount_data, total_distribution, True)
+
+def _create_merkle(user_amount_data, total_distribution, is_dev):
+    # Convert values to integers and calculate ratio using integer division
+    total_amounts = sum(user_amount_data.values())
+    
+    # Calculate amounts using integer multiplication first, then division
     user_amount_data = {
-        k.lower(): int(v * ratio) for k, v in user_amount_data.items()
+        k.lower(): (v * total_distribution) // total_amounts 
+        for k, v in user_amount_data.items()
     }
+    
     addresses = sorted(user_amount_data, key=lambda k: user_amount_data[k], reverse=True)
     while sum(user_amount_data.values()) < total_distribution:
         diff = total_distribution - sum(user_amount_data.values())
@@ -92,24 +103,22 @@ def create_merkle():
     tree = MerkleTree(nodes)
 
     distribution = {
-        "merkleRootBase": encode_hex(tree.root),
-        "tokenTotal": hex(sum(user_amount_data.values())),
+        "merkle_root": encode_hex(tree.root),
+        "token_total": hex(sum(user_amount_data.values())),
         "claims": {
             web3.to_checksum_address(user): {
                 "index": index,
-                # "amount_hex": hex(amount),
                 "amount": amount,
-                "proof": [
-                    tree.get_proof(nodes[index]),
-                ],
+                "proof": tree.get_proof(nodes[index]),
             }
             for user, index, amount in elements
         },
     }
 
     # Write the distribution data to a JSON file
-    with open('./data/lock_break_airdrop.json', 'w') as json_file:
+    with open(f'./data/lock_break_airdrop_{"dev" if is_dev else "prod"}.json', 'w') as json_file:
         json.dump(distribution, json_file, indent=4)
     print(f'Distribution successfully written for {len(distribution["claims"])} users')
     print(f"base merkle root: {encode_hex(tree.root)}")
     return distribution
+
