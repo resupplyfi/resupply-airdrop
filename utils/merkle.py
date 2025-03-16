@@ -1,8 +1,8 @@
 import json
 from brownie import web3
 from itertools import zip_longest
-from eth_abi.packed import encode_packed
 from eth_utils import encode_hex
+from eth_abi.packed import encode_packed
 
 class MerkleTree:
     def __init__(self, elements):
@@ -45,41 +45,7 @@ class MerkleTree:
             return a
         return web3.keccak(b"".join(sorted([a, b])))
     
-def main():
-    from brownie import Contract, chain
-    LOCKER = Contract('0x3f78544364c3eCcDCe4d9C89a630AEa26122829d')
-    end_block = chain.height
-    start_block = 21_425_699  # Last block before December 18 00:00:00 UTC
-    print(f'Fetching all locks withdrawn between blocks {start_block:,} --> {end_block:,}')
-    logs = LOCKER.events.LocksWithdrawn().get_logs(fromBlock=start_block, toBlock=end_block)
-    print(f'{len(logs)} locks withdrawn')
-    data = {}
-    for log in logs:
-        user = log.args['account']
-        penalty = log.args['penalty'] / 1e18
-        if penalty > 0:
-            data[user] = data.get(user, 0) + penalty
-    
-    print(f'{len(data)} unique users with penalties')
-    data = {
-        web3.to_checksum_address(k): int(v) for k, v in data.items()
-    }
-    # Write to JSON file
-    with open('./data/sample_user_data.json', 'w') as f:
-        json.dump(data, f, indent=4)
-
-
-def create_merkle_prod():
-    total_distribution = 10_000_000 * 10 ** 18
-    user_amount_data = json.load(open('./data/penalty_data_prod.json'))
-    return _create_merkle(user_amount_data, total_distribution, False)
-
-def create_merkle_dev():
-    total_distribution = (11111 + 22222 + 33333) * 10 ** 18
-    user_amount_data = json.load(open('./data/penalty_data_dev.json'))
-    return _create_merkle(user_amount_data, total_distribution, True)
-
-def _create_merkle(user_amount_data, total_distribution, is_dev):
+def create_merkle(user_amount_data, total_distribution, is_dev):
     # Convert values to integers and calculate ratio using integer division
     total_amounts = sum(user_amount_data.values())
     
@@ -121,4 +87,3 @@ def _create_merkle(user_amount_data, total_distribution, is_dev):
     print(f'Distribution successfully written for {len(distribution["claims"])} users')
     print(f"base merkle root: {encode_hex(tree.root)}")
     return distribution
-

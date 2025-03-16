@@ -29,7 +29,7 @@ def main():
 
     print(data)
     # Write to CSV file
-    with open('./data/user_lock_data.csv', 'w', newline='') as f:
+    with open('./data/cache/user_lock_data.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['user', 'amount'])  # Header row
         for user, user_data in data.items():

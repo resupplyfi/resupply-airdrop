@@ -2,6 +2,8 @@ from brownie import Contract, ZERO_ADDRESS, chain
 import pandas as pd
 import json
 import os
+import time
+from functools import wraps
 
 PRISMA = Contract('0xdA47862a83dac0c112BA89c6abC2159b95afd71C')
 YPRISMA = Contract('0xe3668873D944E4A949DA05fc8bDE419eFF543882')
@@ -14,9 +16,21 @@ TREASURY = '0xD0eFDF01DD8d650bBA8992E2c42D0bC6d441a673'
 
 DEPLOY_BLOCK = 18029884
 
+# Add timing decorator
+def timing_decorator(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = f(*args, **kwargs)
+        end = time.time()
+        print(f'{f.__name__} took {end - start:.2f} seconds to execute')
+        return result
+    return wrapper
+
+# Add decorator to key functions
+@timing_decorator
 def fees():
     cache_file = 'reports/fees_cache.json'
-    
     # Load cache if it exists
     if os.path.exists(cache_file):
         with open(cache_file, 'r') as f:
@@ -28,7 +42,7 @@ def fees():
         start_block = DEPLOY_BLOCK
         users = set()
     
-    current_block = 21_000_000
+    current_block = chain.height
     
     # Only get new logs since last processed block
     logs = LOCKER.events.LockCreated.get_logs(fromBlock=start_block, toBlock=current_block)
@@ -50,10 +64,11 @@ def fees():
     
     return total
 
-
+@timing_decorator
 def sum_vault_approvals():
     return sum([PRISMA.allowance(VAULT, addr) for addr in ['0xC72bc1a8cf9b1A218386df641d8bE99B40436A0f', TREASURY]]) / 1e18
 
+@timing_decorator
 def sum_receiver_allocations():
     amount = 0
     for i in range(1000):
@@ -64,6 +79,7 @@ def sum_receiver_allocations():
         amount += VAULT.allocated(addr)/1e18
     return amount
 
+@timing_decorator
 def vault_approvals():
     # Initialize with vesting and treasury
     accounts = ['Vesting', 'Team Treasury', 'Receivers']
@@ -102,9 +118,10 @@ def vault_approvals():
     print(f'Circulating Supply: {circulating_supply:,.2f}')
     return total
 
-
-
+@timing_decorator
 def main():
+    start_time = time.time()
+    
     data = {
         'Metric': [
             'Circulating PRISMA', 
@@ -126,16 +143,18 @@ def main():
             'Sum total of Liquid Locker supply', 
             'total locked PRISMA',
             'Boost Delegation Fees'
-        ]  # Empty notes column for user input
+        ]
     }
     
     df = pd.DataFrame(data)
-    # Format the 'Value' column
     df['Value'] = df['Value'].apply(lambda x: f"{x:,.2f}")
     df.to_csv('prisma_data.csv', index=False)
     print(df)
+    
+    end_time = time.time()
+    print(f'\nTotal execution time: {end_time - start_time:.2f} seconds')
 
-
+@timing_decorator
 def get_circulating_prisma():
     total_supply = PRISMA.totalSupply() / 1e18
     vault_balance = PRISMA.balanceOf(VAULT) / 1e18
@@ -171,28 +190,32 @@ def get_circulating_prisma():
         unclaimed_vests +       # unclaimed vests
         receiver_allocations    # receiver allocations: to be sealed in phase 3
     )
-    
+    print(f"Circulating PRISMA: {circulating:,.2f}")
     return circulating
 
+@timing_decorator
 def get_eligible_lock_breaks():
     LOCKER = Contract('0x3f78544364c3eCcDCe4d9C89a630AEa26122829d')
-    end_block = chain.height
-    start_block = 21_425_699  # Last block before December 18 00:00:00 UTC
+    end_block = chain.height    # To be set 1 week after launch
+    start_block = 21_425_699    # Last block before December 18 00:00:00 UTC
     print(f'Fetching all locks withdrawn between blocks {start_block:,} --> {end_block:,}')
     logs = LOCKER.events.LocksWithdrawn().get_logs(fromBlock=start_block, toBlock=end_block)
     return sum([log.args['penalty'] for log in logs])
 
+@timing_decorator
 def get_non_circulating_prisma():
     return (
         PRISMA.totalSupply() / 1e18 -
         get_circulating_prisma()
     )
 
+@timing_decorator
 def get_locked_prisma():
     return (
         PRISMA.balanceOf(LOCKER)
     ) / 1e18
 
+@timing_decorator
 def get_ll_supply():
     return (
         YPRISMA.totalSupply() +
