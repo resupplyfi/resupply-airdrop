@@ -16,8 +16,6 @@ ALLOCATION_RATIOS = {
 }
 ALLOCATIONS = {}
 DUST_THRESHOLD = 1e6
-# Compute allocations
-# Allocation sub calcs 
 
 def main():
     compute_allocations()
