@@ -56,7 +56,7 @@ def create_team_merkle():
     total = sum(tokens_per_wallet.values())
     assert total == ALLOCATIONS['TEAM'], f"Team allocation mismatch: {total} != {ALLOCATIONS['TEAM']}"
     print_allocation_results('TEAM', tokens_per_wallet, total)
-    return create_merkle(tokens_per_wallet, total, False)
+    return create_merkle(tokens_per_wallet, total, 'team')
 
 
 def create_victims_merkle():
@@ -78,12 +78,12 @@ def create_victims_merkle():
     total = sum(tokens_per_wallet.values())
     assert total == ALLOCATIONS['VICTIMS'], f"Victim allocation mismatch: {total} != {ALLOCATIONS['VICTIMS']}"
     print_allocation_results('VICTIMS', tokens_per_wallet, total)
-    return create_merkle(tokens_per_wallet, total, False)
+    return create_merkle(tokens_per_wallet, total, 'victims')
 
 
 def create_penalty_merkle():
     user_amount_data = json.load(open('data/merkle/penalty_splits.json'))
-    return create_merkle(user_amount_data, ALLOCATIONS['LOCK_BREAK'], False)
+    return create_merkle(user_amount_data, ALLOCATIONS['LOCK_BREAK'], 'penalty')
 
 
 def fetch_lock_break_data():

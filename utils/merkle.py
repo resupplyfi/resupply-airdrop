@@ -45,7 +45,7 @@ class MerkleTree:
             return a
         return web3.keccak(b"".join(sorted([a, b])))
     
-def create_merkle(user_amount_data, total_distribution, is_dev):
+def create_merkle(user_amount_data, total_distribution, alloc_type):
     # Convert values to integers and calculate ratio using integer division
     total_amounts = sum(user_amount_data.values())
     
@@ -81,7 +81,7 @@ def create_merkle(user_amount_data, total_distribution, is_dev):
     }
 
     # Write the distribution data to a JSON file
-    with open(f'./data/merkle_data_{"dev" if is_dev else "prod"}.json', 'w') as json_file:
+    with open(f'./data/merkle/merkle_data_{alloc_type}.json', 'w') as json_file:
         json.dump(distribution, json_file, indent=4)
     print(f'Distribution successfully written for {len(distribution["claims"])} users')
     print(f"base merkle root: {encode_hex(tree.root)}")
