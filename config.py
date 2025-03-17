@@ -53,7 +53,7 @@ class Config:
     # Source data files
     TEAM_SPLITS_FILE = f'{SOURCES_DIR}/team_splits.json'
     VICTIM_DATA_FILE = f'{SOURCES_DIR}/victim_data.json'
-    PENALTY_DATA_FILE = f'{MERKLE_DIR}/penalty_data.json'
+    PENALTY_DATA_FILE = f'{SOURCES_DIR}/penalty_data.json'
     
     # Output files
     MERKLE_FILE = 'merkle_data.json'

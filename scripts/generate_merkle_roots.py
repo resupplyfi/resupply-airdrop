@@ -67,7 +67,7 @@ def create_victims_merkle():
 def create_penalty_merkle():
     user_amount_data = json.load(open(Config.PENALTY_DATA_FILE))
     last_run = user_amount_data['last_run']
-    print(f'Last run: {time.strftime("%m/%d %H:%M", time.gmtime(last_run))}')
+    print(f'\n Penalty data last calculated: {time.strftime("%B %d %H:%M", time.gmtime(last_run))} ...')
     wallet_amount_data = {
         web3.to_checksum_address(k): int(v['total_penalty'])
         for k, v in user_amount_data['data'].items()
