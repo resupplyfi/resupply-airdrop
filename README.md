@@ -1,6 +1,6 @@
 # Merkle Root Generation
 
-This repository contains scripts for generating merkle data for RSUP allocations.
+This repository contains scripts to generate merkle data for RSUP allocations.
 
 ## Directory Structure
 
@@ -14,12 +14,6 @@ data/
 │
 └── cache/          # Cache files for optimizing script runtime
 ```
-
-## Scripts
-
-`scripts/generate_merkle_roots.py`
-
-Main script for generating merkle data
 
 ## Usage
 
