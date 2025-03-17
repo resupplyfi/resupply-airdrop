@@ -1,8 +1,8 @@
 # Merkle Root Generation
 
-This repository contains scripts to generate merkle data for RSUP allocations.
+This repository contains scripts to generate merkle data for RSUP allocations. All final source and output data can be found in the data directory.
 
-## Directory Structure
+## Data directory Structure
 
 ```
 data/
