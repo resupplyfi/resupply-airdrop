@@ -9,6 +9,7 @@ data/
 ├── sources/        # Source data for allocations
 │   ├── team_splits.json       # Team allocation percentages (in basis points)
 │   └── victim_data.json       # Victim data including known hack losses and reimbursements to date
+│   └── penalty_data.json      # Total penalties for each user who broke a lock
 │
 ├── merkle/         # Generated merkle data including proofs
 │

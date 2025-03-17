@@ -4,41 +4,44 @@ import json
 import os
 import time
 from functools import wraps
+from utils.utils import func_timer
+from config import Config, CirculatingSupplyData
 
+# Contract Addresses
 PRISMA = Contract('0xdA47862a83dac0c112BA89c6abC2159b95afd71C')
 YPRISMA = Contract('0xe3668873D944E4A949DA05fc8bDE419eFF543882')
 CVXPRISMA = Contract('0x34635280737b5BFe6c7DC2FC3065D60d66e78185')
 LOCKER = Contract('0x3f78544364c3eCcDCe4d9C89a630AEa26122829d')
 VAULT = Contract('0x06bDF212C290473dCACea9793890C5024c7Eb02c')
 FEE_RECEIVER = Contract('0xfdCE0267803C6a0D209D3721d2f01Fd618e9CBF8')
+
+# Addresses
 TREASURY = '0xD0eFDF01DD8d650bBA8992E2c42D0bC6d441a673'
-# Init Param txn: https://etherscan.io/tx/0x51945be1c2cc08f7809d4f15f9484384c736cdaa4aa783a7e51d27e592aafd1c#eventlog
+BURN_ADDRESSES = [
+    '0x000000000000000000000000000000000000dEaD',
+    ZERO_ADDRESS,
+    PRISMA.address,
+    CVXPRISMA.address,
+    YPRISMA.address,
+]
 
+# Block Numbers
 DEPLOY_BLOCK = 18029884
-
-# Add timing decorator
-def timing_decorator(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        result = f(*args, **kwargs)
-        end = time.time()
-        print(f'{f.__name__} took {end - start:.2f} seconds to execute')
-        return result
-    return wrapper
+LOCK_BREAK_START_BLOCK = 21_425_699
 
 # Add decorator to key functions
-@timing_decorator
+@func_timer
 def fees():
-    cache_file = 'reports/fees_cache.json'
-    # Load cache if it exists
-    if os.path.exists(cache_file):
-        with open(cache_file, 'r') as f:
+    # Use config for cache file path
+    if os.path.exists(Config.FEES_CACHE_FILE):
+        with open(Config.FEES_CACHE_FILE, 'r') as f:
             cache = json.load(f)
         last_block = cache['last_block']
-        users = set(cache['users'])  # Convert cached list back to set
+        users = set(cache['users'])
         start_block = last_block + 1
     else:
+        # Create cache directory if it doesn't exist
+        os.makedirs(Config.CACHE_DIR, exist_ok=True)
         start_block = DEPLOY_BLOCK
         users = set()
     
@@ -59,16 +62,16 @@ def fees():
         'last_block': current_block,
         'users': list(users)  # Convert set to list for JSON serialization
     }
-    with open(cache_file, 'w') as f:
+    with open(Config.FEES_CACHE_FILE, 'w') as f:
         json.dump(cache, f)
     
     return total
 
-@timing_decorator
+@func_timer
 def sum_vault_approvals():
     return sum([PRISMA.allowance(VAULT, addr) for addr in ['0xC72bc1a8cf9b1A218386df641d8bE99B40436A0f', TREASURY]]) / 1e18
 
-@timing_decorator
+@func_timer
 def sum_receiver_allocations():
     amount = 0
     for i in range(1000):
@@ -79,7 +82,7 @@ def sum_receiver_allocations():
         amount += VAULT.allocated(addr)/1e18
     return amount
 
-@timing_decorator
+@func_timer
 def vault_approvals():
     # Initialize with vesting and treasury
     accounts = ['Vesting', 'Team Treasury', 'Receivers']
@@ -118,7 +121,7 @@ def vault_approvals():
     print(f'Circulating Supply: {circulating_supply:,.2f}')
     return total
 
-@timing_decorator
+@func_timer
 def main():
     start_time = time.time()
     
@@ -148,74 +151,71 @@ def main():
     
     df = pd.DataFrame(data)
     df['Value'] = df['Value'].apply(lambda x: f"{x:,.2f}")
-    df.to_csv('prisma_data.csv', index=False)
+    df.to_csv(Config.CSV_OUTPUT, index=False)
     print(df)
     
     end_time = time.time()
     print(f'\nTotal execution time: {end_time - start_time:.2f} seconds')
 
-@timing_decorator
+@func_timer
 def get_circulating_prisma():
-    total_supply = PRISMA.totalSupply() / 1e18
-    vault_balance = PRISMA.balanceOf(VAULT) / 1e18
-    fee_receiver_balance = PRISMA.balanceOf(FEE_RECEIVER) / 1e18
-    claimable_fees = fees()
-    unclaimed_vests = sum_vault_approvals()
-    receiver_allocations = sum_receiver_allocations()
-    total_burned = sum([PRISMA.balanceOf(x) for x in [
-        '0x000000000000000000000000000000000000dEaD',
-        ZERO_ADDRESS,
-        PRISMA.address,
-        CVXPRISMA.address,
-        YPRISMA.address,
-    ]]) / 1e18
-    eligible_lock_breaks = get_eligible_lock_breaks() / 1e18
+    # Use dataclass to store and return data
+    supply_data = CirculatingSupplyData(
+        total_supply=PRISMA.totalSupply() / 1e18,
+        vault_balance=PRISMA.balanceOf(VAULT) / 1e18,
+        fee_receiver_balance=PRISMA.balanceOf(FEE_RECEIVER) / 1e18,
+        claimable_fees=fees(),
+        unclaimed_vests=sum_vault_approvals(),
+        receiver_allocations=sum_receiver_allocations(),
+        burned=sum([PRISMA.balanceOf(x) for x in BURN_ADDRESSES]) / 1e18,
+        eligible_lock_breaks=get_eligible_lock_breaks() / 1e18
+    )
     
-    print(f"Total Supply: {total_supply:,.2f}")
-    print(f"Vault Balance: {vault_balance:,.2f}")
-    print(f"Burned: {total_burned:,.2f}")
-    print(f"Fee Receiver Balance: {fee_receiver_balance:,.2f}")
-    print(f"Claimable Fees: {claimable_fees:,.2f}")
-    print(f"Unclaimed Vests: {unclaimed_vests:,.2f}")
-    print(f"Receiver Allocations: {receiver_allocations:,.2f}")
-    print(f"Eligible Lock Breaks: {eligible_lock_breaks:,.2f}")
+    # Print formatted data
+    print(f"Total Supply: {supply_data.total_supply:,.2f}")
+    print(f"Vault Balance: {supply_data.vault_balance:,.2f}")
+    print(f"Burned: {supply_data.burned:,.2f}")
+    print(f"Fee Receiver Balance: {supply_data.fee_receiver_balance:,.2f}")
+    print(f"Claimable Fees: {supply_data.claimable_fees:,.2f}")
+    print(f"Unclaimed Vests: {supply_data.unclaimed_vests:,.2f}")
+    print(f"Receiver Allocations: {supply_data.receiver_allocations:,.2f}")
+    print(f"Eligible Lock Breaks: {supply_data.eligible_lock_breaks:,.2f}")
     
     circulating = (
-        total_supply -          # 300M
-        vault_balance -         # prisma.balanceOf(vault)
-        total_burned -          # sum in burn addresses
-        fee_receiver_balance +  # prisma.balanceOf(fee_receiver)
-        eligible_lock_breaks +  # eligible lock breaks
-        claimable_fees +        # claimable boost fees
-        unclaimed_vests +       # unclaimed vests
-        receiver_allocations    # receiver allocations: to be sealed in phase 3
+        supply_data.total_supply -
+        supply_data.vault_balance -
+        supply_data.burned -
+        supply_data.fee_receiver_balance +
+        supply_data.eligible_lock_breaks +
+        supply_data.claimable_fees +
+        supply_data.unclaimed_vests +
+        supply_data.receiver_allocations
     )
     print(f"Circulating PRISMA: {circulating:,.2f}")
     return circulating
 
-@timing_decorator
+@func_timer
 def get_eligible_lock_breaks():
     LOCKER = Contract('0x3f78544364c3eCcDCe4d9C89a630AEa26122829d')
     end_block = chain.height    # To be set 1 week after launch
-    start_block = 21_425_699    # Last block before December 18 00:00:00 UTC
-    print(f'Fetching all locks withdrawn between blocks {start_block:,} --> {end_block:,}')
-    logs = LOCKER.events.LocksWithdrawn().get_logs(fromBlock=start_block, toBlock=end_block)
+    print(f'Fetching all locks withdrawn between blocks {LOCK_BREAK_START_BLOCK:,} --> {end_block:,}')
+    logs = LOCKER.events.LocksWithdrawn().get_logs(fromBlock=LOCK_BREAK_START_BLOCK, toBlock=end_block)
     return sum([log.args['penalty'] for log in logs])
 
-@timing_decorator
+@func_timer
 def get_non_circulating_prisma():
     return (
         PRISMA.totalSupply() / 1e18 -
         get_circulating_prisma()
     )
 
-@timing_decorator
+@func_timer
 def get_locked_prisma():
     return (
         PRISMA.balanceOf(LOCKER)
     ) / 1e18
 
-@timing_decorator
+@func_timer
 def get_ll_supply():
     return (
         YPRISMA.totalSupply() +
