@@ -1,48 +1,38 @@
-from brownie import Contract, ZERO_ADDRESS, chain
-import pandas as pd
 import json
 import os
-import time
+from brownie import Contract, chain
+import pandas as pd
 from functools import wraps
 from utils.utils import func_timer
-from config import Config, CirculatingSupplyData
+from config import Config, CirculatingSupplyData, ContractAddresses
 
-# Contract Addresses
-PRISMA = Contract('0xdA47862a83dac0c112BA89c6abC2159b95afd71C')
-YPRISMA = Contract('0xe3668873D944E4A949DA05fc8bDE419eFF543882')
-CVXPRISMA = Contract('0x34635280737b5BFe6c7DC2FC3065D60d66e78185')
-LOCKER = Contract('0x3f78544364c3eCcDCe4d9C89a630AEa26122829d')
-VAULT = Contract('0x06bDF212C290473dCACea9793890C5024c7Eb02c')
-FEE_RECEIVER = Contract('0xfdCE0267803C6a0D209D3721d2f01Fd618e9CBF8')
+# Initialize contracts
+PRISMA = Contract(ContractAddresses.PRISMA)
+YPRISMA = Contract(ContractAddresses.YPRISMA)
+CVXPRISMA = Contract(ContractAddresses.CVXPRISMA)
+LOCKER = Contract(ContractAddresses.LOCKER)
+VAULT = Contract(ContractAddresses.VAULT)
+FEE_RECEIVER = Contract(ContractAddresses.FEE_RECEIVER)
 
 # Addresses
-TREASURY = '0xD0eFDF01DD8d650bBA8992E2c42D0bC6d441a673'
-BURN_ADDRESSES = [
-    '0x000000000000000000000000000000000000dEaD',
-    ZERO_ADDRESS,
-    PRISMA.address,
-    CVXPRISMA.address,
-    YPRISMA.address,
-]
+TREASURY = ContractAddresses.TREASURY
+BURN_ADDRESSES = Config.BURN_ADDRESSES
 
 # Block Numbers
-DEPLOY_BLOCK = 18029884
-LOCK_BREAK_START_BLOCK = 21_425_699
+DEPLOY_BLOCK = Config.DEPLOY_BLOCK
+LOCK_BREAK_START_BLOCK = Config.LOCK_BREAK_START_BLOCK
 
-# Add decorator to key functions
+
 @func_timer
 def fees():
-    # Use config for cache file path
     if os.path.exists(Config.FEES_CACHE_FILE):
         with open(Config.FEES_CACHE_FILE, 'r') as f:
             cache = json.load(f)
-        last_block = cache['last_block']
         users = set(cache['users'])
-        start_block = last_block + 1
+        start_block = cache['last_block'] + 1
     else:
-        # Create cache directory if it doesn't exist
         os.makedirs(Config.CACHE_DIR, exist_ok=True)
-        start_block = DEPLOY_BLOCK
+        start_block = Config.DEPLOY_BLOCK
         users = set()
     
     current_block = chain.height
@@ -67,9 +57,14 @@ def fees():
     
     return total
 
+
 @func_timer
 def sum_vault_approvals():
-    return sum([PRISMA.allowance(VAULT, addr) for addr in ['0xC72bc1a8cf9b1A218386df641d8bE99B40436A0f', TREASURY]]) / 1e18
+    return sum([
+        PRISMA.allowance(VAULT, addr) 
+        for addr in [ContractAddresses.VESTING, ContractAddresses.TREASURY]
+    ]) / 1e18
+
 
 @func_timer
 def sum_receiver_allocations():
@@ -77,17 +72,18 @@ def sum_receiver_allocations():
     for i in range(1000):
         receiver = VAULT.idToReceiver(i)
         addr = receiver['account']
-        if addr == ZERO_ADDRESS:
+        if addr == ContractAddresses.ZERO_ADDRESS:
             break
         amount += VAULT.allocated(addr)/1e18
     return amount
+
 
 @func_timer
 def vault_approvals():
     # Initialize with vesting and treasury
     accounts = ['Vesting', 'Team Treasury', 'Receivers']
     amounts = [
-        PRISMA.allowance(VAULT, '0xC72bc1a8cf9b1A218386df641d8bE99B40436A0f')/1e18,
+        PRISMA.allowance(VAULT, ContractAddresses.VESTING)/1e18,
         PRISMA.allowance(VAULT, TREASURY)/1e18,
         0  # Will accumulate receiver amounts
     ]
@@ -96,7 +92,7 @@ def vault_approvals():
     for i in range(1000):
         receiver = VAULT.idToReceiver(i)
         addr = receiver['account']
-        if addr == ZERO_ADDRESS:
+        if addr == ContractAddresses.ZERO_ADDRESS:
             break
         amounts[2] += VAULT.allocated(addr)/1e18
     
@@ -121,18 +117,11 @@ def vault_approvals():
     print(f'Circulating Supply: {circulating_supply:,.2f}')
     return total
 
+
 @func_timer
 def main():
-    start_time = time.time()
-    
     data = {
-        'Metric': [
-            'Circulating PRISMA', 
-            'Non circulating PRISMA', 
-            'Liquid Locker Supply', 
-            'Locked Supply',
-            'Boost Delegation Fees'
-        ],
+        'Metric': list(Config.SUPPLY_METRICS.keys()),
         'Value': [
             get_circulating_prisma(),
             get_non_circulating_prisma(),
@@ -140,22 +129,14 @@ def main():
             get_locked_prisma(),
             fees()
         ],
-        'Note': [
-            'amount of PRISMA + derivatives in circulation', 
-            'amount of PRISMA not currently in circulation', 
-            'Sum total of Liquid Locker supply', 
-            'total locked PRISMA',
-            'Boost Delegation Fees'
-        ]
+        'Note': list(Config.SUPPLY_METRICS.values())
     }
     
     df = pd.DataFrame(data)
     df['Value'] = df['Value'].apply(lambda x: f"{x:,.2f}")
     df.to_csv(Config.CSV_OUTPUT, index=False)
     print(df)
-    
-    end_time = time.time()
-    print(f'\nTotal execution time: {end_time - start_time:.2f} seconds')
+
 
 @func_timer
 def get_circulating_prisma():
@@ -196,7 +177,6 @@ def get_circulating_prisma():
 
 @func_timer
 def get_eligible_lock_breaks():
-    LOCKER = Contract('0x3f78544364c3eCcDCe4d9C89a630AEa26122829d')
     end_block = chain.height    # To be set 1 week after launch
     print(f'Fetching all locks withdrawn between blocks {LOCK_BREAK_START_BLOCK:,} --> {end_block:,}')
     logs = LOCKER.events.LocksWithdrawn().get_logs(fromBlock=LOCK_BREAK_START_BLOCK, toBlock=end_block)

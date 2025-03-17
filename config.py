@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, List
 
 @dataclass
 class CirculatingSupplyData:
@@ -39,6 +39,18 @@ class AllocationRatios:
         assert total == expected, f"Allocation ratios sum to {total}, expected {expected}"
         return True
 
+class ContractAddresses:
+    """Centralized contract addresses"""
+    PRISMA = '0xdA47862a83dac0c112BA89c6abC2159b95afd71C'
+    YPRISMA = '0xe3668873D944E4A949DA05fc8bDE419eFF543882'
+    CVXPRISMA = '0x34635280737b5BFe6c7DC2FC3065D60d66e78185'
+    LOCKER = '0x3f78544364c3eCcDCe4d9C89a630AEa26122829d'
+    VAULT = '0x06bDF212C290473dCACea9793890C5024c7Eb02c'
+    FEE_RECEIVER = '0xfdCE0267803C6a0D209D3721d2f01Fd618e9CBF8'
+    TREASURY = '0xD0eFDF01DD8d650bBA8992E2c42D0bC6d441a673'
+    VESTING = '0xC72bc1a8cf9b1A218386df641d8bE99B40436A0f'
+    LOCKER = '0x3f78544364c3eCcDCe4d9C89a630AEa26122829d'
+
 class Config:
     CACHE_DIR = 'reports'
     FEES_CACHE_FILE = f'{CACHE_DIR}/fees_cache.json'
@@ -69,3 +81,25 @@ class Config:
 
     # Use AllocationRatios class
     ALLOCATION_RATIOS = AllocationRatios
+
+    # Block Numbers
+    DEPLOY_BLOCK = 18029884
+    LOCK_BREAK_START_BLOCK = 21_425_699
+
+    # Supply Metrics
+    SUPPLY_METRICS = {
+        'Circulating PRISMA': 'amount of PRISMA + derivatives in circulation',
+        'Non circulating PRISMA': 'amount of PRISMA not currently in circulation',
+        'Liquid Locker Supply': 'Sum total of Liquid Locker supply',
+        'Locked Supply': 'total locked PRISMA',
+        'Boost Delegation Fees': 'Boost Delegation Fees'
+    }
+
+    # Burn addresses
+    BURN_ADDRESSES = [
+        '0x000000000000000000000000000000000000dEaD',
+        '0x0000000000000000000000000000000000000000',  # ZERO_ADDRESS
+        ContractAddresses.PRISMA,
+        ContractAddresses.CVXPRISMA,
+        ContractAddresses.YPRISMA,
+    ]

@@ -18,6 +18,18 @@ data/
 
 ## Usage
 
+To refresh, and save new supply data:
+
+```bash
+brownie run compute_supply
+```
+
+To refresh, and save new penalty data:
+
+```bash
+brownie run compute_lock_breaks
+```
+
 To generate merkle roots:
 
 ```bash

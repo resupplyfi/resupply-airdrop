@@ -4,7 +4,7 @@ import json
 import os
 import time
 
-LOCKER = Contract('0x3f78544364c3eCcDCe4d9C89a630AEa26122829d')
+LOCKER = Contract(Config.LOCKER)
 
 def fetch_lock_break_data():
     """
