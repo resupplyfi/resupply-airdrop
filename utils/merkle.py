@@ -64,7 +64,6 @@ def create_merkle(user_amount_data, total_distribution, is_dev):
     elements = [
         (account, index, user_amount_data[account]) for index, account in enumerate(addresses)
     ]
-    print(elements)
     nodes = [encode_hex(encode_packed(["address", "uint", "uint"], el)) for el in elements]
     tree = MerkleTree(nodes)
 
