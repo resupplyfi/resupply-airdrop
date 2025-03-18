@@ -1,8 +1,7 @@
 import json
 import os
-from brownie import Contract, chain
+from brownie import Contract, chain, ZERO_ADDRESS
 import pandas as pd
-from functools import wraps
 from utils.utils import func_timer
 from config import Config, CirculatingSupplyData, ContractAddresses
 
@@ -14,19 +13,11 @@ LOCKER = Contract(ContractAddresses.LOCKER)
 VAULT = Contract(ContractAddresses.VAULT)
 FEE_RECEIVER = Contract(ContractAddresses.FEE_RECEIVER)
 
-# Addresses
-TREASURY = ContractAddresses.TREASURY
-BURN_ADDRESSES = Config.BURN_ADDRESSES
-
-# Block Numbers
-DEPLOY_BLOCK = Config.DEPLOY_BLOCK
-LOCK_BREAK_START_BLOCK = Config.LOCK_BREAK_START_BLOCK
-
 
 @func_timer
-def fees():
-    if os.path.exists(Config.FEES_CACHE_FILE):
-        with open(Config.FEES_CACHE_FILE, 'r') as f:
+def get_fees():
+    if os.path.exists(Config.USERS_LOCKS_FILE):
+        with open(Config.USERS_LOCKS_FILE, 'r') as f:
             cache = json.load(f)
         users = set(cache['users'])
         start_block = cache['last_block'] + 1
@@ -52,7 +43,7 @@ def fees():
         'last_block': current_block,
         'users': list(users)  # Convert set to list for JSON serialization
     }
-    with open(Config.FEES_CACHE_FILE, 'w') as f:
+    with open(Config.USERS_LOCKS_FILE, 'w') as f:
         json.dump(cache, f)
     
     return total
@@ -72,7 +63,7 @@ def sum_receiver_allocations():
     for i in range(1000):
         receiver = VAULT.idToReceiver(i)
         addr = receiver['account']
-        if addr == ContractAddresses.ZERO_ADDRESS:
+        if addr == ZERO_ADDRESS:
             break
         amount += VAULT.allocated(addr)/1e18
     return amount
@@ -80,11 +71,10 @@ def sum_receiver_allocations():
 
 @func_timer
 def vault_approvals():
-    # Initialize with vesting and treasury
     accounts = ['Vesting', 'Team Treasury', 'Receivers']
     amounts = [
         PRISMA.allowance(VAULT, ContractAddresses.VESTING)/1e18,
-        PRISMA.allowance(VAULT, TREASURY)/1e18,
+        PRISMA.allowance(VAULT, ContractAddresses.TREASURY)/1e18,
         0  # Will accumulate receiver amounts
     ]
     
@@ -110,7 +100,6 @@ def vault_approvals():
     print(df.to_string(index=False))
     print("\033[1m{:<20} {:>14}\033[0m".format('TOTAL', f"{total:,.2f}"))
     
-
     vault_bal = PRISMA.balanceOf(VAULT) / 1e18
     max_total_supply = PRISMA.maxTotalSupply() / 1e18
     circulating_supply = max_total_supply - vault_bal + total
@@ -120,39 +109,57 @@ def vault_approvals():
 
 @func_timer
 def main():
-    data = {
-        'Metric': list(Config.SUPPLY_METRICS.keys()),
-        'Value': [
-            get_circulating_prisma(),
-            get_non_circulating_prisma(),
-            get_ll_supply(),
-            get_locked_prisma(),
-            fees()
-        ],
-        'Note': list(Config.SUPPLY_METRICS.values())
-    }
+    fees = get_fees()
+    circulating = get_circulating_prisma(fees)
     
-    df = pd.DataFrame(data)
-    df['Value'] = df['Value'].apply(lambda x: f"{x:,.2f}")
-    df.to_csv(Config.CSV_OUTPUT, index=False)
-    print(df)
+    supply_data = {
+        "timestamp": chain.time(),
+        "block_number": chain.height,
+        "metrics": {
+            "circulating_supply": {
+                "value": circulating,
+                "description": Config.SUPPLY_METRICS['Circulating PRISMA']
+            },
+            "non_circulating_supply": {
+                "value": get_non_circulating_prisma(circulating),
+                "description": Config.SUPPLY_METRICS['Non circulating PRISMA']
+            },
+            "liquid_locker_supply": {
+                "value": get_ll_supply(),
+                "description": Config.SUPPLY_METRICS['Liquid Locker Supply']
+            },
+            "locked_supply": {
+                "value": get_locked_prisma(),
+                "description": Config.SUPPLY_METRICS['Locked Supply']
+            },
+            "boost_delegation_fees": {
+                "value": fees,
+                "description": Config.SUPPLY_METRICS['Boost Delegation Fees']
+            }
+        }
+    }
+
+    os.makedirs(os.path.dirname(Config.SUPPLY_DATA_FILE), exist_ok=True)
+    with open(Config.SUPPLY_DATA_FILE, 'w') as f:
+        json.dump(supply_data, f, indent=2)
+    
+    print(json.dumps(supply_data, indent=2))
+    return supply_data
 
 
 @func_timer
-def get_circulating_prisma():
-    # Use dataclass to store and return data
+def get_circulating_prisma(fees):
     supply_data = CirculatingSupplyData(
         total_supply=PRISMA.totalSupply() / 1e18,
         vault_balance=PRISMA.balanceOf(VAULT) / 1e18,
         fee_receiver_balance=PRISMA.balanceOf(FEE_RECEIVER) / 1e18,
-        claimable_fees=fees(),
+        claimable_fees=fees,
         unclaimed_vests=sum_vault_approvals(),
         receiver_allocations=sum_receiver_allocations(),
-        burned=sum([PRISMA.balanceOf(x) for x in BURN_ADDRESSES]) / 1e18,
+        burned=sum([PRISMA.balanceOf(x) for x in Config.BURN_ADDRESSES]) / 1e18,
         eligible_lock_breaks=get_eligible_lock_breaks() / 1e18
     )
     
-    # Print formatted data
     print(f"Total Supply: {supply_data.total_supply:,.2f}")
     print(f"Vault Balance: {supply_data.vault_balance:,.2f}")
     print(f"Burned: {supply_data.burned:,.2f}")
@@ -175,27 +182,23 @@ def get_circulating_prisma():
     print(f"Circulating PRISMA: {circulating:,.2f}")
     return circulating
 
-@func_timer
 def get_eligible_lock_breaks():
     end_block = chain.height    # To be set 1 week after launch
-    print(f'Fetching all locks withdrawn between blocks {LOCK_BREAK_START_BLOCK:,} --> {end_block:,}')
-    logs = LOCKER.events.LocksWithdrawn().get_logs(fromBlock=LOCK_BREAK_START_BLOCK, toBlock=end_block)
+    print(f'Fetching all locks withdrawn between blocks {Config.LOCK_BREAK_START_BLOCK:,} --> {end_block:,}')
+    logs = LOCKER.events.LocksWithdrawn().get_logs(fromBlock=Config.LOCK_BREAK_START_BLOCK, toBlock=end_block)
     return sum([log.args['penalty'] for log in logs])
 
-@func_timer
-def get_non_circulating_prisma():
+def get_non_circulating_prisma(circulating):
     return (
         PRISMA.totalSupply() / 1e18 -
-        get_circulating_prisma()
+        circulating
     )
 
-@func_timer
 def get_locked_prisma():
     return (
         PRISMA.balanceOf(LOCKER)
     ) / 1e18
 
-@func_timer
 def get_ll_supply():
     return (
         YPRISMA.totalSupply() +

@@ -75,7 +75,7 @@ def create_penalty_merkle():
     }
     total = sum(wallet_amount_data.values())
     print_allocation_results('PENALTIES', wallet_amount_data, total)
-    return create_merkle(wallet_amount_data, total, 'penalties')
+    return create_merkle(wallet_amount_data, total, 'penalty')
 
 
 def print_allocation_results(alloc_type, data, alloc_total):

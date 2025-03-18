@@ -3,6 +3,7 @@ from brownie import web3
 from itertools import zip_longest
 from eth_utils import encode_hex
 from eth_abi.packed import encode_packed
+from config import Config
 
 class MerkleTree:
     def __init__(self, elements):
@@ -81,7 +82,7 @@ def create_merkle(user_amount_data, total_distribution, alloc_type):
     }
 
     # Write the distribution data to a JSON file
-    with open(f'./data/merkle/merkle_data_{alloc_type}.json', 'w') as json_file:
+    with open(Config.get_merkle_file(alloc_type), 'w') as json_file:
         json.dump(distribution, json_file, indent=4)
     print(f'Distribution successfully written for {len(distribution["claims"])} users')
     print(f"base merkle root: {encode_hex(tree.root)}")

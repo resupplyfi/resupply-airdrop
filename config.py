@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, List
+from enum import IntEnum
 
 @dataclass
 class CirculatingSupplyData:
@@ -50,27 +51,23 @@ class ContractAddresses:
     TREASURY = '0xD0eFDF01DD8d650bBA8992E2c42D0bC6d441a673'
     VESTING = '0xC72bc1a8cf9b1A218386df641d8bE99B40436A0f'
     LOCKER = '0x3f78544364c3eCcDCe4d9C89a630AEa26122829d'
+    VEST_MANAGER = '0x6666666677B06CB55EbF802BB12f8876360f919c'
 
 class Config:
-    CACHE_DIR = 'reports'
-    FEES_CACHE_FILE = f'{CACHE_DIR}/fees_cache.json'
-    CSV_OUTPUT = '{CACHE_DIR}/liquidity_data.csv'
-    
     # Directory structure
     DATA_DIR = 'data'
     MERKLE_DIR = f'{DATA_DIR}/merkle'
     SOURCES_DIR = f'{DATA_DIR}/sources'
     CACHE_DIR = f'{DATA_DIR}/cache'
     
+    # Cache data files
+    USERS_LOCKS_FILE = f'{CACHE_DIR}/user_lock_data.json'
+    SUPPLY_DATA_FILE = f'{CACHE_DIR}/supply_data.json'
+    
     # Source data files
     TEAM_SPLITS_FILE = f'{SOURCES_DIR}/team_splits.json'
     VICTIM_DATA_FILE = f'{SOURCES_DIR}/victim_data.json'
     PENALTY_DATA_FILE = f'{SOURCES_DIR}/penalty_data.json'
-    
-    # Output files
-    MERKLE_FILE = 'merkle_data.json'
-    MERKLE_FILE_ALLOC_TYPE = 'merkle_data_{alloc_type}.json'
-    MERKLE_FILE_ALLOC_TYPE_PATTERN = MERKLE_FILE_ALLOC_TYPE.format(alloc_type='')
 
     # Constants
     INITIAL_SUPPLY = 60_000_000 * 10 ** 18
@@ -103,3 +100,23 @@ class Config:
         ContractAddresses.CVXPRISMA,
         ContractAddresses.YPRISMA,
     ]
+
+    @classmethod
+    def get_merkle_file(cls, alloc_type: str) -> str:
+        """Returns the path to a merkle data file for a given allocation type"""
+        return f'{cls.MERKLE_DIR}/merkle_data_{alloc_type}.json'
+
+class AirdropType(IntEnum):
+    TEAM = 4
+    VICTIMS = 5
+    PENALTY = 6
+
+    @classmethod
+    def get_merkle_file(cls, airdrop_type: 'AirdropType') -> str:
+        """Get merkle file path for a given airdrop type"""
+        type_names = {
+            cls.TEAM: 'team',
+            cls.VICTIMS: 'victims',
+            cls.PENALTY: 'penalty'
+        }
+        return f'{Config.MERKLE_DIR}/merkle_data_{type_names[airdrop_type]}.json'

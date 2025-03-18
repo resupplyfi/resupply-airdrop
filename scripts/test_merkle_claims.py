@@ -1,57 +1,69 @@
 from brownie import interface, accounts, web3
 import json
+import time
+from config import AirdropType, ContractAddresses
 
-airdrop_types = [4,5,6]
-test_accounts = ['0x1dDBcf631B1410D42D49E59Ee234e6Ce509B584c', '0xa082CE06774Dd553A5CB3a75f22c99Ca929AE5C0', '0x2E41375F65b936f645Ed8aEfDf5406C6Cd43C4B3']
-dev = accounts.at(web3.ens.address('vitalik.eth'), force=True)
-vest_manager = interface.IVestManager('0xd6845EE4a827638908D120054eC79276476BA942', owner=dev)
+airdrop_types = [AirdropType.TEAM, AirdropType.VICTIMS, AirdropType.PENALTY]
+vest_manager = interface.IVestManager(ContractAddresses.VEST_MANAGER)
 
-def clear():
-    for type in airdrop_types:
-        for user in test_accounts:
-            if vest_manager.hasClaimed(user, type):
-                vest_manager.setHasClaimed(user, type, False)
 
-def claim():
-    """
-    Claim a single claim for a user and type, to validate the merkle proofs work as expected
-    """
-    user = test_accounts[0] # Can replace with any user
-    claim_type = 4          # Can replace with any valid claim type
-    proof, amount, index = get_claim_data(user, claim_type)
-    vest_manager.merkleClaim(
+def claim_one_team():
+    return claim_one(AirdropType.TEAM)
+
+
+def claim_one_victims():
+    return claim_one(AirdropType.VICTIMS)
+
+
+def claim_one_penalty():
+    return claim_one(AirdropType.PENALTY)
+
+
+def claim_one(airdrop_type: AirdropType) -> None:
+    """Generic function to process one claim for any airdrop type"""
+    user_data = get_next_user_data(airdrop_type)
+    if user_data is None:
+        print('All claims have been processed')
+        return
+
+    user = user_data['address']
+    amount = user_data['amount']
+    print(f'Claiming {airdrop_type.name} vest for {user} with amount {amount} ...')
+
+    vest_data_before = vest_manager.getAggregateVestData(user)
+    
+    tx = vest_manager.merkleClaim(
         user,
         user,
         amount,
-        claim_type,
-        proof,
-        index,
-        {'from': user}
+        airdrop_type,
+        user_data['proof'],
+        user_data['index'],
+        {'from': user, 'allow_revert': True, 'gas_limit': 5_000_000}
     )
+    
+    time.sleep(2)
+    vest_data_after = vest_manager.getAggregateVestData(user)
+    assert vest_data_after['_totalAmount'] == vest_data_before['_totalAmount'] + amount
 
-def claim_all():
-    """
-    Claim all available claims for all users and types, to validate the merkle proofs work as expected
-    """
-    for type in airdrop_types:
-        for user in test_accounts:
-            proof, amount, index = get_claim_data(user)
-            vest_manager.merkleClaim(
-                user,
-                user,
-                amount,
-                type,
-                proof,
-                index, 
-                {'from': user}
-            )
 
-def get_claim_data(user):
-    """
-    Retrieve the `proof`, `amount`, and `index` for a particular user claim from local json file
-    """
-    data = json.load(open(f'./data/merkle_data_dev.json'))['claims']
-    proof = data[user]['proof']
-    amount = data[user]['amount']
-    index = data[user]['index']
-    return proof, amount, index
+def get_next_user_data(type: AirdropType):
+    merkle_file = AirdropType.get_merkle_file(type)
+    with open(merkle_file, 'r') as f:
+        data = json.load(f)
+
+    allocations = []
+    for address, info in data['claims'].items():
+        allocations.append({
+            'address': address,
+            'amount': int(info['amount']),
+            'index': info['index'],
+            'proof': info['proof']  # Keep merkle proof in case needed
+        })
+    
+    # Sort by allocation amount in descending order
+    sorted_allocations = sorted(allocations, key=lambda x: x['amount'], reverse=True)
+    for i in range(len(sorted_allocations)):
+        if not vest_manager.hasClaimed(sorted_allocations[i]['address'], type):
+            return sorted_allocations[i]
+    return None

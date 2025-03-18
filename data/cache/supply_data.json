@@ -1,0 +1,26 @@
+{
+  "timestamp": 1742255565,
+  "block_number": 22070007,
+  "metrics": {
+    "circulating_supply": {
+      "value": 176036676.67483956,
+      "description": "amount of PRISMA + derivatives in circulation"
+    },
+    "non_circulating_supply": {
+      "value": 123963323.32516044,
+      "description": "amount of PRISMA not currently in circulation"
+    },
+    "liquid_locker_supply": {
+      "value": 81743680.95368326,
+      "description": "Sum total of Liquid Locker supply"
+    },
+    "locked_supply": {
+      "value": 82375250.0,
+      "description": "total locked PRISMA"
+    },
+    "boost_delegation_fees": {
+      "value": 74468.5799875255,
+      "description": "Boost Delegation Fees"
+    }
+  }
+}
