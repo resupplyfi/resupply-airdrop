@@ -67,3 +67,13 @@ def get_next_user_data(type: AirdropType):
         if not vest_manager.hasClaimed(sorted_allocations[i]['address'], type):
             return sorted_allocations[i]
     return None
+
+def commit_penalty_merkle_root():
+    merkle_file = AirdropType.get_merkle_file(AirdropType.PENALTY)
+    with open(merkle_file, 'r') as f:
+        data = json.load(f)
+    merkle_root = data['merkle_root']
+    owner = vest_manager.owner()
+    allocation = web3.to_int(hexstr=data['token_total'])
+    print(f'Setting lock penalty merkle root to {merkle_root} for {allocation} ...')
+    vest_manager.setLockPenaltyMerkleRoot(data['merkle_root'], allocation, {'from': owner})

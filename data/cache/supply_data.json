@@ -1,6 +1,6 @@
 {
-  "timestamp": 1742255565,
-  "block_number": 22070007,
+  "timestamp": 1742265094,
+  "block_number": 22070797,
   "metrics": {
     "circulating_supply": {
       "value": 176036676.67483956,
@@ -19,7 +19,7 @@
       "description": "total locked PRISMA"
     },
     "boost_delegation_fees": {
-      "value": 74468.5799875255,
+      "value": 74468.57998752553,
       "description": "Boost Delegation Fees"
     }
   }
