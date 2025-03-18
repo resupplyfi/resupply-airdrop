@@ -34,7 +34,7 @@ def fetch_lock_break_data():
         if penalty > 0:
             if user in penalty_data:
                 penalty += int(penalty_data[user]['total_penalty'])
-                txn_hashes = penalty_data[user]['txn_hashes'].append(log.transactionHash.hex())
+                txn_hashes.append(log.transactionHash.hex())
             penalty_data[user] = {
                 'total_penalty': str(penalty),
                 'timestamp': chain[log.blockNumber].timestamp,
