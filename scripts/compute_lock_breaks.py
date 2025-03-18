@@ -1,11 +1,13 @@
 from brownie import Contract, chain, web3
-from config import Config
+from config import Config, ContractAddresses
+from utils.utils import func_timer
 import json
 import os
 import time
 
-LOCKER = Contract(Config.LOCKER)
+LOCKER = Contract(ContractAddresses.LOCKER)
 
+@func_timer
 def fetch_lock_break_data():
     """
     Fetches all lock break penalties between a specified block width and saves them to cache.
