@@ -7,8 +7,8 @@ import time
 ALLOCATIONS = {}
 
 def main():
-    total_tokens = 0
     compute_allocations()
+    total_tokens = 0
     total_tokens += create_team_merkle()
     total_tokens += create_victims_merkle()
     total_tokens += create_penalty_merkle()
@@ -95,6 +95,9 @@ def create_penalty_merkle():
     }
     
     total = sum(tokens_per_wallet.values())
+    assert redemption_rate > 0
+    assert redemption_rate < 10**17 # 0.1 rate
+    assert total < ALLOCATIONS['REDEMPTIONS'] * .10 # Sanity check
     print_allocation_results('PENALTIES', tokens_per_wallet, total)
     create_merkle(tokens_per_wallet, total, 'penalty')
     return sum(tokens_per_wallet.values())

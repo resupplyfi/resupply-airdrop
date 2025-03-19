@@ -1,6 +1,6 @@
 {
     "merkle_root": "0x706fe5d7fc617632ac4600bf675ece0a444b89de29ca64e264af97e61665b6bb",
-    "token_total": "0x1a784379d99db42000000",
+    "token_total": 2000000000000000000000000,
     "claims": {
         "0x56A201b872B50bBdEe0021ed4D1bb36359D291ED": {
             "index": 0,
