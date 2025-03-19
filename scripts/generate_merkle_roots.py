@@ -7,10 +7,12 @@ import time
 ALLOCATIONS = {}
 
 def main():
+    total_tokens = 0
     compute_allocations()
-    create_team_merkle()
-    create_victims_merkle()
-    create_penalty_merkle()
+    total_tokens += create_team_merkle()
+    total_tokens += create_victims_merkle()
+    total_tokens += create_penalty_merkle()
+    print(f'\nTotal tokens allocated: {total_tokens}')
 
 
 def compute_allocations():
@@ -25,8 +27,8 @@ def compute_allocations():
 
 def create_team_merkle():
     """
-    Input data should be a JSON file containing wallet addresses mapped to their allocation
-    percentages expressed in basis points (1/10000). The percentages should sum to 10000 (100%).
+    Input data should be a JSON file containing team wallet addresses mapped to their assigned percentages.
+    The percentages should sum to 10000 (100%).
     """
     split_data = json.load(open(Config.TEAM_SPLITS_FILE))
     assert sum(split_data.values()) == Config.BASIS_POINTS, f"Team split total mismatch: {total} != {Config.BASIS_POINTS}"
@@ -39,10 +41,15 @@ def create_team_merkle():
     total = sum(tokens_per_wallet.values())
     assert total == ALLOCATIONS['TEAM'], f"Team allocation mismatch: {total} != {ALLOCATIONS['TEAM']}"
     print_allocation_results('TEAM', tokens_per_wallet, total)
-    return create_merkle(tokens_per_wallet, total, 'team')
+    create_merkle(tokens_per_wallet, total, 'team')
+    return sum(tokens_per_wallet.values())
 
 
 def create_victims_merkle():
+    """
+    Input data should be a JSON file containing victim wallet addresses mapped to their losses.
+    This function will assign amounts based on each victim's loss as a percentage of total losses.
+    """
     victim_data = json.load(open(Config.VICTIM_DATA_FILE))
     total_losses = sum(int(v['final_loss']) for v in victim_data.values())
     tokens_per_wallet = {
@@ -61,25 +68,52 @@ def create_victims_merkle():
         total = sum(tokens_per_wallet.values()) # Recalculate total
     assert total == ALLOCATIONS['VICTIMS'], f"Victim allocation mismatch: {total} != {ALLOCATIONS['VICTIMS']}"
     print_allocation_results('VICTIMS', tokens_per_wallet, total)
-    return create_merkle(tokens_per_wallet, total, 'victims')
+    create_merkle(tokens_per_wallet, total, 'victims')
+    return sum(tokens_per_wallet.values())
 
 
 def create_penalty_merkle():
+    """
+    Input data should be a JSON file containing wallet addresses mapped to their total penalties.
+    Penalties are reimbursed at RSUP:PRISMA redemption rate.
+    """
+    circulating_supply = get_circulating_supply()
+    assert circulating_supply > 175_000_000 * 10**18, f"Circulating supply is less than 175M. Something is wrong: {circulating_supply}"
+    
+    # Calculate rate using integer math
+    redemption_rate = (ALLOCATIONS['REDEMPTIONS'] * 10**18) // circulating_supply
+    print(f'Redemption rate: {redemption_rate / 10**18:.18f}')
+    
     user_amount_data = json.load(open(Config.PENALTY_DATA_FILE))
     last_run = user_amount_data['last_run']
     print(f'\n Penalty data last calculated: {time.strftime("%B %d %H:%M", time.gmtime(last_run))} ...')
-    wallet_amount_data = {
-        web3.to_checksum_address(k): int(v['total_penalty'])
-        for k, v in user_amount_data['data'].items()
-        if int(v['total_penalty']) > 0 # Ignore wallets that have no penalties
+    
+    tokens_per_wallet = {
+        wallet: (int(info['total_penalty']) * redemption_rate) // 10**18
+        for wallet, info in user_amount_data['data'].items()
+        if int(info['total_penalty']) > 0  # Ignore wallets that have no penalties
     }
-    total = sum(wallet_amount_data.values())
-    print_allocation_results('PENALTIES', wallet_amount_data, total)
-    return create_merkle(wallet_amount_data, total, 'penalty')
+    
+    total = sum(tokens_per_wallet.values())
+    print_allocation_results('PENALTIES', tokens_per_wallet, total)
+    create_merkle(tokens_per_wallet, total, 'penalty')
+    return sum(tokens_per_wallet.values())
 
 
 def print_allocation_results(alloc_type, data, alloc_total):
     print(f'\n --- {alloc_type} allocations ---')
-    for k, v in sorted(data.items(), key=lambda x: x[1], reverse=True):
-        print(f'{k}: {v}')
+    for wallet, amount in sorted(data.items(), key=lambda x: x[1], reverse=True):
+        print(f'{wallet}: {amount}')
     print(f'Total: {alloc_total}\n')
+
+
+def get_circulating_supply() -> int:
+    """Returns the current circulating supply from the supply data cache as an integer (in wei)"""
+    try:
+        with open(Config.SUPPLY_DATA_FILE, 'r') as f:
+            supply_data = json.load(f)
+        # Convert from float to integer (wei)
+        return int(supply_data['metrics']['circulating_supply']['value'] * 10 ** 18)
+    except (FileNotFoundError, KeyError, json.JSONDecodeError) as e:
+        print(f"Error reading circulating supply: {e}")
+        raise e

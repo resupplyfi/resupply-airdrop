@@ -70,7 +70,7 @@ def create_merkle(user_amount_data, total_distribution, alloc_type):
 
     distribution = {
         "merkle_root": encode_hex(tree.root),
-        "token_total": hex(sum(user_amount_data.values())),
+        "token_total": sum(user_amount_data.values()),
         "claims": {
             web3.to_checksum_address(user): {
                 "index": index,
