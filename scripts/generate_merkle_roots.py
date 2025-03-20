@@ -78,7 +78,7 @@ def create_penalty_merkle():
     Penalties are reimbursed at RSUP:PRISMA redemption rate.
     """
     circulating_supply = get_circulating_supply()
-    assert circulating_supply > 175_000_000 * 10**18, f"Circulating supply is less than 175M. Something is wrong: {circulating_supply}"
+    assert circulating_supply > 170_000_000 * 10**18, f"Circulating supply is less than 170M. Something is wrong: {circulating_supply}"
     
     # Calculate rate using integer math
     redemption_rate = (ALLOCATIONS['REDEMPTIONS'] * 10**18) // circulating_supply

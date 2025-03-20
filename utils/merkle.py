@@ -74,7 +74,7 @@ def create_merkle(user_amount_data, total_distribution, alloc_type):
         "claims": {
             web3.to_checksum_address(user): {
                 "index": index,
-                "amount": amount,
+                "amount": str(amount),
                 "proof": tree.get_proof(nodes[index]),
             }
             for user, index, amount in elements

@@ -12,7 +12,7 @@ def claim_one_team():
 
 
 def claim_one_victims():
-    return claim_one(AirdropType.VICTIMS)
+    claim_one(AirdropType.VICTIMS)
 
 
 def claim_one_penalty():
