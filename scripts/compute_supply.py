@@ -176,8 +176,7 @@ def get_circulating_prisma(fees):
         supply_data.fee_receiver_balance +
         supply_data.eligible_lock_breaks +
         supply_data.claimable_fees +
-        supply_data.unclaimed_vests +
-        supply_data.receiver_allocations
+        supply_data.unclaimed_vests
     )
     print(f"Circulating PRISMA: {circulating:,.2f}")
     return circulating
