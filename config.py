@@ -75,6 +75,7 @@ class Config:
     BASIS_POINTS = 10_000
     DUST_THRESHOLD = 1e3
     LOCK_BREAK_START_BLOCK = 21_425_699  # Last block before December 18 00:00:00 UTC
+    LOCK_BREAK_ELIGIBILITY_END_TIME = 1743033600  # 2025-03-27 00:00:00 UTC
 
     # Use AllocationRatios class
     ALLOCATION_RATIOS = AllocationRatios

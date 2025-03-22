@@ -56,8 +56,4 @@ def fetch_lock_break_data():
     return penalty_data
 
 def main():
-    """Entry point for Brownie script"""
     return fetch_lock_break_data()
-
-if __name__ == '__main__':
-    main()

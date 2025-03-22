@@ -1,7 +1,7 @@
 import json
 from brownie import Contract, chain, web3
 from utils.merkle import create_merkle
-from config import Config, AllocationRatios
+from config import Config, AllocationRatios, ContractAddresses
 import time
 
 ALLOCATIONS = {}
@@ -77,15 +77,12 @@ def create_penalty_merkle():
     Input data should be a JSON file containing wallet addresses mapped to their total penalties.
     Penalties are reimbursed at RSUP:PRISMA redemption rate.
     """
-    circulating_supply = get_circulating_supply()
-    assert circulating_supply > 170_000_000 * 10**18, f"Circulating supply is less than 170M. Something is wrong: {circulating_supply}"
-    
-    # Calculate rate using integer math
-    redemption_rate = (ALLOCATIONS['REDEMPTIONS'] * 10**18) // circulating_supply
+    redemption_rate = Contract(ContractAddresses.VEST_MANAGER).redemptionRatio()
     print(f'Redemption rate: {redemption_rate / 10**18:.18f}')
     
     user_amount_data = json.load(open(Config.PENALTY_DATA_FILE))
     last_run = user_amount_data['last_run']
+    assert last_run > Config.LOCK_BREAK_ELIGIBILITY_END_TIME, f"Last run not after window closed"
     print(f'\n Penalty data last calculated: {time.strftime("%B %d %H:%M", time.gmtime(last_run))} ...')
     
     tokens_per_wallet = {
