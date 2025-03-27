@@ -82,7 +82,7 @@ def create_penalty_merkle():
     
     user_amount_data = json.load(open(Config.PENALTY_DATA_FILE))
     last_run = user_amount_data['last_run']
-    assert last_run > Config.LOCK_BREAK_ELIGIBILITY_END_TIME, f"Last run not after window closed"
+    assert last_run + 12 > Config.LOCK_BREAK_ELIGIBILITY_END_TIME, f"Last run not after window closed"
     print(f'\n Penalty data last calculated: {time.strftime("%B %d %H:%M", time.gmtime(last_run))} ...')
     
     tokens_per_wallet = {

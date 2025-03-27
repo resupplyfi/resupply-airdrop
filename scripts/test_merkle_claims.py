@@ -74,6 +74,6 @@ def commit_penalty_merkle_root():
         data = json.load(f)
     merkle_root = data['merkle_root']
     owner = vest_manager.owner()
-    allocation = web3.to_int(hexstr=data['token_total'])
+    allocation = int(data['token_total'])
     print(f'Setting lock penalty merkle root to {merkle_root} for {allocation} ...')
     vest_manager.setLockPenaltyMerkleRoot(data['merkle_root'], allocation, {'from': owner})

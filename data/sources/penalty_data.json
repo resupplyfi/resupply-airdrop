@@ -4,7 +4,7 @@
       "timestamp": 1742476667,
       "total_penalty": "18415500000000000000000",
       "txn_hashes": [
-        "0x54b6e7dc3ac73be225d40e78979c40ad6455ee23b77c9c6d3bea11e9be794bc8",
+        "0x8ec32d650a3201c8b8e1c9372d51d9f8e1d897a559a783b4598661dfc822756e",
         "0x54b6e7dc3ac73be225d40e78979c40ad6455ee23b77c9c6d3bea11e9be794bc8"
       ]
     },
@@ -40,7 +40,7 @@
       "timestamp": 1737921563,
       "total_penalty": "64586000000000000000000",
       "txn_hashes": [
-        "0xe7025095b75f3c58ccb2b6ce865cb379cc66c79b495c78bf78f529751d0daa44",
+        "0xc25ba797ec0b44e983a573fede5f6f1e985b6babb6aebff84a036dbb8b89e015",
         "0xe7025095b75f3c58ccb2b6ce865cb379cc66c79b495c78bf78f529751d0daa44"
       ]
     },
@@ -69,7 +69,7 @@
       "timestamp": 1735595087,
       "total_penalty": "5488000000000000000000",
       "txn_hashes": [
-        "0x1509a9b6b03549f63e146727aa8739361de9dcd90ddffd382d2e3c486add77fb",
+        "0xd4e6af3dc9db2857471ce105d0fac1cf6fe8844eaa6459bf87212b59a242179a",
         "0x1509a9b6b03549f63e146727aa8739361de9dcd90ddffd382d2e3c486add77fb"
       ]
     },
@@ -84,7 +84,7 @@
       "timestamp": 1735585679,
       "total_penalty": "79864000000000000000000",
       "txn_hashes": [
-        "0xe2aa94b44e99fccf9de2efee46e1d561fdeea207928e65ff7ce0ad96321649d1",
+        "0xc47fe9d74dc3906bf8f174908cf86d8e12d4d292468531300703b0220b4a9458",
         "0xe2aa94b44e99fccf9de2efee46e1d561fdeea207928e65ff7ce0ad96321649d1"
       ]
     },
@@ -358,7 +358,7 @@
       "timestamp": 1742098943,
       "total_penalty": "31414846153846153846153",
       "txn_hashes": [
-        "0x3ed02e3b4060297734d1d253cc12899536d2708590492ae332ce695688b3ea50",
+        "0x4b96898a221feaf0f6d3900feea1e14fd2c9dba459a2ec7db714fd0751c5077b",
         "0x3ed02e3b4060297734d1d253cc12899536d2708590492ae332ce695688b3ea50"
       ]
     },
@@ -415,7 +415,7 @@
       "timestamp": 1736742659,
       "total_penalty": "199818000000000000000000",
       "txn_hashes": [
-        "0x6bf70a4f4ed34a45bef406210914bfaec6b14927801c927eb9daa2c4dcac6fee",
+        "0x3788c443ea5b5a369b717bdddb818707382d5c971cfcd10659d7b9cc047e99ae",
         "0x6bf70a4f4ed34a45bef406210914bfaec6b14927801c927eb9daa2c4dcac6fee"
       ]
     },
@@ -451,10 +451,10 @@
       "timestamp": 1734799091,
       "total_penalty": "433060000000000000000000",
       "txn_hashes": [
-        "0x5c4f444ccf9855055364cdf651f08bcd006b60590329d9dc40cb9f6901c3a9bd",
+        "0x2a59fc1aad5f1923fa62e49441ab644368beced9d10d500a057fa14a6cf02214",
         "0x5c4f444ccf9855055364cdf651f08bcd006b60590329d9dc40cb9f6901c3a9bd"
       ]
     }
   },
-  "last_run": 1742652683
+  "last_run": 1743033599
 }
